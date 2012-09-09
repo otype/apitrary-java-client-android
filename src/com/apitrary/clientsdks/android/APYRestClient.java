@@ -295,6 +295,7 @@ public class APYRestClient {
             OutputStream outputStream = new BufferedOutputStream(connection.getOutputStream());
             outputStream.write(jsonBytes);
             outputStream.flush();
+            outputStream.close();
 
             responseCode = connection.getResponseCode();
             responseMessage = connection.getResponseMessage();
@@ -367,6 +368,7 @@ public class APYRestClient {
             OutputStream outputStream = new BufferedOutputStream(connection.getOutputStream());
             outputStream.write(jsonBytes);
             outputStream.flush();
+            outputStream.close();
 
             responseCode = connection.getResponseCode();
             responseMessage = connection.getResponseMessage();
