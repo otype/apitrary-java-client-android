@@ -63,17 +63,21 @@ abstract class APYUtils {
         String dataPropertyKey = null;
         while (dataPropertyKeys.hasNext()) {
             dataPropertyKey = dataPropertyKeys.next();
-            apyEntity.put(dataPropertyKey, jsonDataObject.optString(dataPropertyKey, null));
-
-            // Extract the times and convert the Python format ("seconds.milliseconds")
-            // to Java long format (milliseconds)
-            double _createdAt = jsonDataObject.getDouble("_createdAt");
-            double _updatedAt = jsonDataObject.getDouble("_updatedAt");
-            long createdAt = (long) (_createdAt * 1000);
-            long updatedAt = (long) (_updatedAt * 1000);
-
-            apyEntity.setCreatedAt(createdAt);
-            apyEntity.setUpdatedAt(updatedAt);
+            if (dataPropertyKey.equalsIgnoreCase("_createdAt")) {
+                // Extract the creation and convert the Python format ("seconds.milliseconds")
+                // to Java long format (milliseconds)
+                double _createdAt = jsonDataObject.getDouble("_createdAt");
+                long createdAt = (long) (_createdAt * 1000);
+                apyEntity.setCreatedAt(createdAt);
+            } else if (dataPropertyKey.equalsIgnoreCase("_updatedAt")) {
+                // Extract the update date and convert the Python format ("seconds.milliseconds")
+                // to Java long format (milliseconds)
+                double _updatedAt = jsonDataObject.getDouble("_updatedAt");
+                long updatedAt = (long) (_updatedAt * 1000);
+                apyEntity.setUpdatedAt(updatedAt);
+            } else {
+                apyEntity.put(dataPropertyKey, jsonDataObject.optString(dataPropertyKey, null));
+            }
         }
         
         return apyEntity;
