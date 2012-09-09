@@ -474,6 +474,7 @@ public class APYRestClient {
         connection.setRequestProperty("Accept", "application/json");
         connection.setDoInput(true);
         connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
+        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
         return connection;
     }
 
@@ -506,6 +507,7 @@ public class APYRestClient {
         connection.setUseCaches(false);
         connection.setFixedLengthStreamingMode(contentLength);
         connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
+        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
         return connection;
     }
 
@@ -538,6 +540,7 @@ public class APYRestClient {
         connection.setUseCaches(false);
         connection.setFixedLengthStreamingMode(contentLength);
         connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
+        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
         return connection;
     }
 
@@ -565,6 +568,7 @@ public class APYRestClient {
         connection.setRequestProperty("Accept", "application/json");
         connection.setUseCaches(false);
         connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
+        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
         return connection;
     }
 
