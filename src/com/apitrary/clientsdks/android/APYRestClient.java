@@ -310,8 +310,10 @@ public class APYRestClient {
             // Everything is fine
             try {
                 JSONObject responseJsonObject = getJsonObjectFromResponseStream(connection.getInputStream());
+                JSONObject jsonResultObject = responseJsonObject.getJSONObject(JSON_RESPONSE_RESULT_KEY);
+
                 // Extract the created entity ID
-                String entityId = responseJsonObject.getString(JSON_RESPONSE_ID_KEY);
+                String entityId = jsonResultObject.getString(JSON_RESPONSE_ID_KEY);
                 entity.setId(entityId);
             } catch (IOException e) {
                 throw new APYException("IOException while reading the response stream.", e);
