@@ -1,4 +1,4 @@
-package com.apitrary.clientsdks.android;
+package com.apitrary.sdk;
 
 public class APYException extends Exception {
 

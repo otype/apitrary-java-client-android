@@ -1,4 +1,4 @@
-package com.apitrary.clientsdks.android;
+package com.apitrary.sdk;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

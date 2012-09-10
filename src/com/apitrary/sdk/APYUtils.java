@@ -1,4 +1,4 @@
-package com.apitrary.clientsdks.android;
+package com.apitrary.sdk;
 
 import java.util.Iterator;
 
