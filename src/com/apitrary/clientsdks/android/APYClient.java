@@ -25,7 +25,7 @@ import android.util.Log;
  * @author Sebastian Engel <se@apitrary.com>
  * 
  */
-public class APYRestClient {
+public class APYClient {
 
     /**
      * The apitrary log tag used for log output in Android log output.
@@ -68,7 +68,7 @@ public class APYRestClient {
     private int apiVersion;
 
     /**
-     * Constructs an instance of {@link APYRestClient} used to interact with an apitrary API.
+     * Constructs an instance of {@link APYClient} used to interact with an apitrary API.
      * 
      * @param apiBaseUrl
      *            the base URL of the target API
@@ -81,7 +81,7 @@ public class APYRestClient {
      *             if the given apiId is null or empty,
      *             if the given API version is less or equal to 0
      */
-    public APYRestClient(String apiBaseUrl, String apiId, int apiVersion) throws IllegalArgumentException {
+    public APYClient(String apiBaseUrl, String apiId, int apiVersion) throws IllegalArgumentException {
         // Validate the parameters
         if (APYUtils.isNullOrEmpty(apiBaseUrl)) {
             throw new IllegalArgumentException(
