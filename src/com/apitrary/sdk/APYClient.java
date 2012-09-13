@@ -1,74 +1,33 @@
 package com.apitrary.sdk;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.util.Log;
 
 /**
  * Main class of the apitrary client library.
- * 
- * @author Sebastian Engel <se@apitrary.com>
- * 
  */
 public class APYClient {
 
     /**
      * The apitrary log tag used for log output in Android log output.
      */
+    @SuppressWarnings("unused")
     private static final String APITARY_LOG_TAG = "Apitrary";
     
     /**
-     * The connection timeout in milliseconds.
+     * The timeout in milliseconds for any request.
      */
-    private static final int CONNECTION_TIMEOUT_MS = 15000;
+    private int requestTimeout = 15000;
 
     /**
-     * The key of the JSON "result" array/object in a response.
+     * The full URL of the apitrary API to work with.
      */
-    private static final String JSON_RESPONSE_RESULT_KEY = "result";
+    private URL fullApiUrl;
 
     /**
-     * The key for the ID value of a single result object in a response.
-     */
-    private static final String JSON_RESPONSE_ID_KEY = "_id";
-
-    /**
-     * The key for a single data object in a response.
-     */
-    private static final String JSON_RESPONSE_DATA_KEY = "_data";
-
-    /**
-     * The base URL of the target API.
-     */
-    private String apiBaseUrl;
-
-    /**
-     * The API ID used to identify the API to use.
-     */
-    private String apiId;
-
-    /**
-     * The version of the API to use.
-     */
-    private int apiVersion;
-
-    /**
-     * Constructs an instance of {@link APYClient} used to interact with an apitrary API.
+     * Constructs an instance of {@link APYClient} used to interact with an
+     * apitrary API.
      * 
      * @param apiBaseUrl
      *            the base URL of the target API
@@ -77,12 +36,13 @@ public class APYClient {
      * @param apiVersion
      *            the version of your API as an integer >= 1
      * @throws IllegalArgumentException
-     *             if the given apiBaseUrl is null or empty,
-     *             if the given apiId is null or empty,
-     *             if the given API version is less or equal to 0
+     *             if the given apiBaseUrl was null or empty, if the given apiId
+     *             was null or empty, if the given API version was less or equal
+     *             to 0
+     * @throws MalformedURLException
+     *             if no valid URL could be constructed using the given values
      */
-    public APYClient(String apiBaseUrl, String apiId, int apiVersion) throws IllegalArgumentException {
-        // Validate the parameters
+    public APYClient(String apiBaseUrl, String apiId, int apiVersion) throws IllegalArgumentException, MalformedURLException {
         if (APYUtils.isNullOrEmpty(apiBaseUrl)) {
             throw new IllegalArgumentException(
                     "The API base URL must not be null or empty.");
@@ -98,536 +58,276 @@ public class APYClient {
                     "The API version must be an integer >= 1.");
         }
 
-        this.apiBaseUrl = apiBaseUrl;
-        this.apiId = apiId;
-        this.apiVersion = apiVersion;
+        fullApiUrl = APYUtils.getFullApiUrl(apiBaseUrl, apiId, apiVersion);
     }
 
     /**
-     * Fetches all entities for the given (entity / resource) name.
+     * Fetches all entities for the given entity (type) name from the apitrary
+     * backend.
      * 
      * @param entityName
-     *            the entity / resource name
-     * @return a list of {@link APYEntity}
+     *            the name identifying the kind of entities to fetch
+     * @return a list of all entities
      * @throws IllegalArgumentException
-     *             if the given entity name is null or empty
+     *             if the given entity name was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to fetch the entities from the API
+     *             if anything went wrong while trying to fetch the entities
      */
-    public List<APYEntity> getAll(String entityName) throws IllegalArgumentException, APYException {
-        // Validate the parameters
+    public List<APYEntity> fetchAll(String entityName) throws IllegalArgumentException, APYException {
         if (APYUtils.isNullOrEmpty(entityName)) {
-            throw new IllegalArgumentException("Parameter 'entityName' is null or empty."
-                        + " In order to fetch all entities you must specify the entity type's name.");
+            throw new IllegalArgumentException("The given entity name was null or empty.");
         }
 
-        // Prepare and perform the request
-        String requestUrl = getApiUrl().concat(entityName);
-        HttpURLConnection connection;
-        int responseCode;
-        String responseMessage;
-        try {
-            Log.d(APITARY_LOG_TAG, "Sending GET request to " + requestUrl);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        return requestInvoker.fetchAll(entityName);
+    }
 
-            connection = setupGetConnection(requestUrl);
-            connection.connect();
-
-            responseCode = connection.getResponseCode();
-            responseMessage = connection.getResponseMessage();
-        } catch (MalformedURLException e) {
-            throw new APYException("Malformed URL '" + requestUrl, e);
-        } catch (IOException e) {
-            throw new APYException("Unsuccessful request to " + requestUrl, e);
+    /**
+     * Asynchronously fetches all entities for the given entity (type) name from the apitrary
+     * backend.
+     * 
+     * @param entityName
+     *            the name identifying the kind of entities to fetch
+     * @param callback
+     *            the {@link APYFetchAllCallback} used to inform the caller about
+     *            the operations outcome.
+     * @throws IllegalArgumentException
+     *             if the given entity name was null or empty, or the callback was null
+     */
+    public void fetchAllAsync(String entityName, APYFetchAllCallback callback) throws IllegalArgumentException {
+        if (APYUtils.isNullOrEmpty(entityName)) {
+            throw new IllegalArgumentException("The given entity name was null or empty.");
         }
 
-        // Handle the response
-        List<APYEntity> resultEntities = new ArrayList<APYEntity>();
-
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            // Everything is fine, so extract the entities from the response
-            try {
-                JSONObject responseJsonObject = getJsonObjectFromResponseStream(connection.getInputStream());
-                JSONArray jsonResultArray = responseJsonObject.getJSONArray(JSON_RESPONSE_RESULT_KEY);
-
-                JSONObject jsonResultObject = null;
-                APYEntity apyEntity = null;
-                // Iterate over all result objects
-                for (int index = 0; index < jsonResultArray.length(); index++) {
-                    jsonResultObject = jsonResultArray.getJSONObject(index);
-
-                    // Convert the _data object into an APYEntity
-                    JSONObject jsonDataObject = jsonResultObject.getJSONObject(JSON_RESPONSE_DATA_KEY);
-                    apyEntity = APYUtils.convertFromJson(entityName, jsonDataObject);
-                    
-                    // Get the value for the _id and set it into our APYEntity 
-                    apyEntity.setId(jsonResultObject.optString(JSON_RESPONSE_ID_KEY, null));
-
-                    // Filter out the _init object
-                    // TODO Remove this as soon as we stopped returning the _init object
-                    if (apyEntity.get("_init") != null) {
-                        continue;
-                    }
-                    resultEntities.add(apyEntity);
-                }
-            } catch (IOException e) {
-                throw new APYException("IOException while reading the response stream.", e);
-            } catch (JSONException e) {
-                throw new APYException(
-                        "Response JSON data was in unexpected format and could not be parsed correctly.", e);
-            }
-        } else {
-            Log.i(APITARY_LOG_TAG, 
-                    "Could not fetch the entities. HTTP status: " + responseCode + " - " + responseMessage);
-            throw new APYException(
-                    "Could not fetch the entities. HTTP status: " + responseCode + " - " + responseMessage);
+        if (callback == null) {
+            throw new IllegalArgumentException("The given callback was null.");
         }
-        return resultEntities;
+
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        new APYFetchAllTask(requestInvoker, callback).execute(entityName);
+    }
+
+    /**
+     * Fetches the entity for the given entity (type) name matching the given entity ID from the apitrary
+     * backend.
+     * 
+     * @param entityName
+     *            the name identifying the kind of entity to fetch
+     * @param entityId
+     *            the ID of the entity to fetch
+     * @return the fetched {@link APYEntity} or null if none could be found
+     * @throws IllegalArgumentException
+     *             if the given entity name or ID was null or empty
+     * @throws APYException
+     *             if anything went wrong while trying to fetch the entity
+     */
+    public APYEntity fetchOne(String entityName, String entityId) throws IllegalArgumentException, APYException {
+        if (APYUtils.isNullOrEmpty(entityName)) {
+            throw new IllegalArgumentException("The given entity name was null or empty.");
+        }
+
+        if (APYUtils.isNullOrEmpty(entityId)) {
+            throw new IllegalArgumentException("The given entity id was null or empty.");
+        }
+
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        return requestInvoker.fetchOne(entityName, entityId);
+    }
+
+    /**
+     * Asynchronously fetches the entity for the given entity (type) name
+     * matching the given entity ID from the apitrary backend.
+     * 
+     * @param entityName
+     *            the name identifying the kind of entities to fetch
+     * @param entityId
+     *            the ID of the entity to fetch
+     * @param callback
+     *            the {@link APYFetchOneCallback} used to inform the caller
+     *            about the operations outcome.
+     * @throws IllegalArgumentException
+     *             if the given entity name or ID was null or empty, or the callback
+     *             was null
+     */
+    public void fetchOneAsync(String entityName, String entityId, APYFetchOneCallback callback)
+            throws IllegalArgumentException {
+        if (APYUtils.isNullOrEmpty(entityName)) {
+            throw new IllegalArgumentException("The given entity name was null or empty.");
+        }
+
+        if (APYUtils.isNullOrEmpty(entityId)) {
+            throw new IllegalArgumentException("The given entity id was null or empty.");
+        }
+
+        if (callback == null) {
+            throw new IllegalArgumentException("The given callback was null.");
+        }
+
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        new APYFetchOneTask(requestInvoker, callback).execute(entityName, entityId);
+    }
+
+    /**
+     * Creates the given {@link APYEntity} on the apitrary backend.
+     * 
+     * @param entity
+     *            the {@link APYEntity} to create.
+     * @throws IllegalArgumentException if the entity was null or if its name was null or empty
+     * @throws APYException if anything went wrong while trying to create the entity
+     */
+    public APYEntity create(APYEntity entity) throws IllegalArgumentException, APYException {
+        if (entity == null) {
+            throw new IllegalArgumentException("The given entity was null.");
+        }
+
+        if (APYUtils.isNullOrEmpty(entity.getName())) {
+            throw new IllegalArgumentException("The name of the given entity was null or empty.");
+        }
+
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        return requestInvoker.create(entity);
+    }
+
+    /**
+     * Asynchronously creates the given {@link APYEntity} on the apitrary backend.
+     * 
+     * @param entity
+     *            the {@link APYEntity} to create.
+     * @param callback
+     *            the {@link APYCreateCallback} used to inform the caller about
+     *            the operations outcome. May be null, if the caller is not interested in the result.
+     * @throws IllegalArgumentException if the entity was null or if its name was null or empty
+     */
+    public void createAsync(APYEntity entity, APYCreateCallback callback) throws IllegalArgumentException {
+        if (entity == null) {
+            throw new IllegalArgumentException("The given entity was null.");
+        }
+
+        if (APYUtils.isNullOrEmpty(entity.getName())) {
+            throw new IllegalArgumentException("The name of the given entity was null or empty.");
+        }
+
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        new APYCreateTask(requestInvoker, callback).execute(entity);
+    }
+
+    /**
+     * Updates the given entity on the apitrary backend.
+     * 
+     * @param entity
+     *            the entity to update
+     * @return the updated {@link APYEntity}
+     * @throws IllegalArgumentException
+     *             if the entity was null or if its name or ID was null or empty
+     * @throws APYException
+     *             if anything went wrong while trying to create the entity
+     */
+    public APYEntity update(APYEntity entity) throws IllegalArgumentException, APYException {
+        if (entity == null) {
+            throw new IllegalArgumentException("The given entity was null.");
+        }
+
+        if (APYUtils.isNullOrEmpty(entity.getName())) {
+            throw new IllegalArgumentException("The name of the given entity was null or empty.");
+        }
+
+        if (APYUtils.isNullOrEmpty(entity.getId())) {
+            throw new IllegalArgumentException("The ID of the given entity was null or empty.");
+        }
+
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        return requestInvoker.update(entity);
     }
     
     /**
-     * Fetches an entity for the given (entity / resource) name and id.
-     * 
-     * @param entityName
-     *            the entity / resource name
-     * @param entityId
-     *            the id of the entity to fetch
-     * @return the entity found, or null if none matched
-     * @throws IllegalArgumentException
-     *             if the given entity name is null or empty
-     * @throws APYException
-     *             if anything went wrong while trying to fetch the entity from the API
-     */
-    public APYEntity get(String entityName, String entityId) throws IllegalArgumentException, APYException {
-        // Validate the parameters
-        if (APYUtils.isNullOrEmpty(entityName) && APYUtils.isNullOrEmpty(entityId)) {
-            throw new IllegalArgumentException("In order to fetch an entity you must specify its name and id.");
-        } else if (APYUtils.isNullOrEmpty(entityName)) {
-            throw new IllegalArgumentException("Parameter 'entityName' is null or empty."
-                    + " In order to fetch an entity you must specify its name and id.");
-        } else if (APYUtils.isNullOrEmpty(entityId)) {
-            throw new IllegalArgumentException("Parameter 'entityId' is null or empty."
-                    + " In order to fetch an entity you must specify its name and id.");
-        }
-
-        // Prepare and perform the request
-        String requestUrl = getApiUrl().concat(entityName).concat("/").concat(entityId);
-        HttpURLConnection connection;
-        int responseCode;
-        String responseMessage;
-        try {
-            Log.d(APITARY_LOG_TAG, "Sending GET request to " + requestUrl);
-
-            connection = setupGetConnection(requestUrl);
-            connection.connect();
-
-            responseCode = connection.getResponseCode();
-            responseMessage = connection.getResponseMessage();
-        } catch (MalformedURLException e) {
-            throw new APYException("Malformed URL '" + requestUrl, e);
-        } catch (IOException e) {
-            throw new APYException("Unsuccessful request to " + requestUrl, e);
-        }
-        
-        // Handle the response
-        APYEntity resultEntity = null;
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            // Everything is fine, so extract the entities from the response
-            try {
-                JSONObject responseJsonObject = getJsonObjectFromResponseStream(connection.getInputStream());
-                JSONObject jsonResultObject = responseJsonObject.getJSONObject(JSON_RESPONSE_RESULT_KEY);
-
-                // Convert the _data object into an APYEntity
-                JSONObject jsonDataObject = jsonResultObject.getJSONObject(JSON_RESPONSE_DATA_KEY);
-                resultEntity = APYUtils.convertFromJson(entityName, jsonDataObject);
-                
-                // Get the value for the _id and set it into our APYEntity 
-                resultEntity.setId(jsonResultObject.optString(JSON_RESPONSE_ID_KEY, null));
-            } catch (IOException e) {
-                throw new APYException("IOException while reading the response stream.", e);
-            } catch (JSONException e) {
-                throw new APYException(
-                        "Response JSON data was in unexpected format and could not be parsed correctly.", e);
-            }
-        } else {
-            Log.i(APITARY_LOG_TAG, 
-                    "Could not fetch the entity. HTTP status: " + responseCode + " - " + responseMessage);
-            throw new APYException(
-                    "Could not fetch the entity. HTTP status: " + responseCode + " - " + responseMessage);
-        }
-        return resultEntity;
-    }
-
-    /**
-     * Creates the given {@link APYEntity} instance on the backend.
-     * If successful, sets the generated ID on the given entity.
+     * Asynchronously updates the given entity on the apitrary backend.
      * 
      * @param entity
-     *            the entity to create on the backend.
-     * @throws IllegalArgumentException
-     *             when the given entity is null
-     * @throws APYException
-     *             if anything went wrong while trying to fetch the entities from the API
+     *            the {@link APYEntity} to update.
+     * @param callback
+     *            the {@link APYUpdateCallback} used to inform the caller about
+     *            the operations outcome. May be null, if the caller is not interested in the result.
+     * @throws IllegalArgumentException if the entity was null or if its name or ID was null or empty
      */
-    public void create(APYEntity entity) throws IllegalArgumentException, APYException {
-        // Validate the parameters
-        APYUtils.validateEntity(entity);
-
-        // Create a JSON object for the entity
-        JSONObject jsonObject;
-        try {
-            jsonObject = APYUtils.convertToJson(entity);
-        } catch (JSONException e) {
-            throw new APYException("Entity could not be converted to JSON.", e);
+    public void updateAsync(APYEntity entity, APYUpdateCallback callback) throws IllegalArgumentException {
+        if (entity == null) {
+            throw new IllegalArgumentException("The given entity was null.");
         }
 
-        // Prepare and perform the request
-        String requestUrl = getApiUrl().concat(entity.getName());
-        HttpURLConnection connection;
-        int responseCode;
-        String responseMessage;
-        try {
-            Log.d(APITARY_LOG_TAG, "Sending POST request to " + requestUrl);
-
-            byte[] jsonBytes = jsonObject.toString().getBytes(); // TODO Use charset parameter?
-            connection = setupPostConnection(requestUrl, jsonBytes.length);
-
-            // Write the JSON entity data into the request body
-            OutputStream outputStream = new BufferedOutputStream(connection.getOutputStream());
-            outputStream.write(jsonBytes);
-            outputStream.flush();
-            outputStream.close();
-
-            responseCode = connection.getResponseCode();
-            responseMessage = connection.getResponseMessage();
-        } catch (MalformedURLException e) {
-            throw new APYException("Malformed URL '" + requestUrl + "'.", e);
-        } catch (IOException e) {
-            throw new APYException("Unsuccessful request to " + requestUrl, e);
+        if (APYUtils.isNullOrEmpty(entity.getName())) {
+            throw new IllegalArgumentException("The name of the given entity was null or empty.");
         }
-
-        // Handle the response
-        if (responseCode == HttpURLConnection.HTTP_CREATED) {
-            // Everything is fine
-            try {
-                JSONObject responseJsonObject = getJsonObjectFromResponseStream(connection.getInputStream());
-                JSONObject jsonResultObject = responseJsonObject.getJSONObject(JSON_RESPONSE_RESULT_KEY);
-
-                // Extract the created entity ID
-                String entityId = jsonResultObject.getString(JSON_RESPONSE_ID_KEY);
-                entity.setId(entityId);
-            } catch (IOException e) {
-                throw new APYException("IOException while reading the response stream.", e);
-            } catch (JSONException e) {
-                throw new APYException(
-                        "Response JSON data was in unexpected format and could not be parsed correctly.", e);
-            }
-        } else {
-            Log.i(APITARY_LOG_TAG, 
-                    "Could not create the entity. HTTP status: " + responseCode + " - " + responseMessage);
-            throw new APYException(
-                    "Could not create the entity. HTTP status: " + responseCode + " - " + responseMessage);
-        }
-    }
-
-    /**
-     * Updates the given {@link APYEntity} instance on the backend.
-     * 
-     * @param entity
-     *            the entity to update on the backend.
-     * @throws IllegalArgumentException
-     *             when the given entity is null or has no ID
-     * @throws APYException
-     *             if anything went wrong while trying to fetch the entities from the API
-     */
-    public void update(APYEntity entity) throws IllegalArgumentException, APYException {
-        // Validate the parameters
-        APYUtils.validateEntity(entity);
 
         if (APYUtils.isNullOrEmpty(entity.getId())) {
-            throw new IllegalArgumentException("The entity to update must contain an id.");
+            throw new IllegalArgumentException("The ID of the given entity was null or empty.");
         }
 
-        // Create a JSON object for the entity
-        JSONObject jsonObject;
-        try {
-            jsonObject = APYUtils.convertToJson(entity);
-        } catch (JSONException e) {
-            throw new APYException("Entity could not be converted to JSON.", e);
-        }
-
-        // Prepare the request
-        String requestUrl = getApiUrl().concat(entity.getName()).concat("/").concat(entity.getId());
-        HttpURLConnection connection;
-        int responseCode;
-        String responseMessage;
-        try {
-            Log.d(APITARY_LOG_TAG, "Sending PUT request to " + requestUrl);
-
-            byte[] jsonBytes = jsonObject.toString().getBytes(); // TODO Use charset parameter?
-            connection = setupPutConnection(requestUrl, jsonBytes.length);
-
-            // Write the JSON entity data into the request body
-            OutputStream outputStream = new BufferedOutputStream(connection.getOutputStream());
-            outputStream.write(jsonBytes);
-            outputStream.flush();
-            outputStream.close();
-
-            responseCode = connection.getResponseCode();
-            responseMessage = connection.getResponseMessage();
-        } catch (MalformedURLException e) {
-            throw new APYException("Malformed URL '" + requestUrl + "'.", e);
-        } catch (IOException e) {
-            throw new APYException("Unsuccessful request to " + requestUrl, e);
-        }
-
-        // Handle the response
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            // Everything is fine
-            try {
-                JSONObject responseJsonObject = getJsonObjectFromResponseStream(connection.getInputStream());
-                JSONObject jsonResultObject = responseJsonObject.getJSONObject(JSON_RESPONSE_RESULT_KEY);
-
-                // Convert the _data object into an APYEntity
-                JSONObject jsonDataObject = jsonResultObject.getJSONObject(JSON_RESPONSE_DATA_KEY);
-                entity = APYUtils.convertFromJson(entity.getName(), jsonDataObject);
-                
-                // Get the value for the _id and set it into our APYEntity 
-                entity.setId(jsonResultObject.optString(JSON_RESPONSE_ID_KEY, null));
-            } catch (IOException e) {
-                throw new APYException("IOException while reading the response stream.", e);
-            } catch (JSONException e) {
-                throw new APYException(
-                        "Response JSON data was in unexpected format and could not be parsed correctly.", e);
-            }
-        } else {
-            Log.i(APITARY_LOG_TAG, 
-                    "Could not update the entity. HTTP status: " + responseCode + " - " + responseMessage);
-            throw new APYException(
-                    "Could not update the entity. HTTP status: " + responseCode + " - " + responseMessage);
-        }
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        new APYUpdateTask(requestInvoker, callback).execute(entity);
     }
 
     /**
-     * Delete the given {@link APYEntity} instance on the backend.
+     * Deletes the given entity on the apitrary backend.
      * 
      * @param entity
-     *            the entity to delete on the backend.
+     *            the entity to delete
+     * @return the ID of the deleted entity
      * @throws IllegalArgumentException
-     *             when the given entity is null or has no ID
+     *             if the entity was null or if its name or ID was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to fetch the entities from the API
+     *             if anything went wrong while trying to create the entity
      */
-    public void delete(APYEntity entity) throws IllegalArgumentException, APYException {
-        // Validate the parameters
-        APYUtils.validateEntity(entity);
+    public String delete(APYEntity entity) throws IllegalArgumentException, APYException {
+        if (entity == null) {
+            throw new IllegalArgumentException("The given entity was null.");
+        }
+
+        if (APYUtils.isNullOrEmpty(entity.getName())) {
+            throw new IllegalArgumentException("The name of the given entity was null or empty.");
+        }
 
         if (APYUtils.isNullOrEmpty(entity.getId())) {
-            throw new IllegalArgumentException("The entity to delete must contain an id.");
+            throw new IllegalArgumentException("The ID of the given entity was null or empty.");
         }
 
-        // Prepare and perform the request
-        String requestUrl = getApiUrl().concat(entity.getName()).concat("/").concat(entity.getId());
-        HttpURLConnection connection;
-        int responseCode;
-        String responseMessage;
-        try {
-            Log.d(APITARY_LOG_TAG, "Sending DELETE request to " + requestUrl);
-
-            connection = setupDeleteConnection(requestUrl);
-            connection.connect();
-
-            responseCode = connection.getResponseCode();
-            responseMessage = connection.getResponseMessage();
-        } catch (MalformedURLException e) {
-            throw new APYException("Malformed URL '" + requestUrl + "'.", e);
-        } catch (IOException e) {
-            throw new APYException("Unsuccessful request to " + requestUrl, e);
-        }
-
-        // Handle the response
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            // Everything is fine
-        } else {
-            Log.i(APITARY_LOG_TAG, 
-                    "Could not delete the entity. HTTP status: " + responseCode + " - " + responseMessage);
-            throw new APYException(
-                    "Could not delete the entity. HTTP status: " + responseCode + " - " + responseMessage);
-        }
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        return requestInvoker.delete(entity);
     }
 
     /**
-     * Sets up an {@link HttpURLConnection} for the given request URL. To
-     * finally execute the request, call "connect()" on the returned
-     * {@link HttpURLConnection} instance.
+     * Asynchronously deletes the given entity on the apitrary backend.
      * 
-     * @param requestUrl
-     *            the URL to send the request to
-     * @return an {@link HttpURLConnection} set up for a GET request to the
-     *         given URL
-     * @throws MalformedURLException
-     *             when the given URL was malformed
-     * @throws IOException
-     *             when there was a problem setting up the connection object
+     * @param entity
+     *            the {@link APYEntity} to delete.
+     * @param callback
+     *            the {@link APYDeleteCallback} used to inform the caller about
+     *            the operations outcome. May be null, if the caller is not interested in the result.
+     * @throws IllegalArgumentException if the entity was null or if its name or ID was null or empty
      */
-    private static HttpURLConnection setupGetConnection(String requestUrl) throws MalformedURLException, IOException {
-        URL connectionUrl = new URL(requestUrl);
-        HttpURLConnection connection = (HttpURLConnection) connectionUrl.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoInput(true);
-        connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
-        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
-        return connection;
-    }
-
-    /**
-     * Sets up an {@link HttpURLConnection} for a POST request to the given
-     * request URL. To set the content body, write into the connection's
-     * {@link OutputStream}.
-     * 
-     * @param requestUrl
-     *            the URL to send the request to
-     * @param contentLength
-     *            the content length of the data in the request body
-     * @return an {@link HttpURLConnection} set up for a GET request to the
-     *         given URL
-     * @throws MalformedURLException
-     *             when the given URL was malformed
-     * @throws IOException
-     *             when there was a problem setting up the connection object
-     */
-    private static HttpURLConnection setupPostConnection(String requestUrl,
-            int contentLength) throws MalformedURLException, IOException {
-        URL connectionUrl = new URL(requestUrl);
-        HttpURLConnection connection = (HttpURLConnection) connectionUrl
-                .openConnection();
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setUseCaches(false);
-        connection.setFixedLengthStreamingMode(contentLength);
-        connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
-        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
-        return connection;
-    }
-
-    /**
-     * Sets up an {@link HttpURLConnection} for a PUT request to the given
-     * request URL. To set the content body, write into the connection's
-     * {@link OutputStream}.
-     * 
-     * @param requestUrl
-     *            the URL to send the request to
-     * @param contentLength
-     *            the content length of the data in the request body
-     * @return an {@link HttpURLConnection} set up for a GET request to the
-     *         given URL
-     * @throws MalformedURLException
-     *             when the given URL was malformed
-     * @throws IOException
-     *             when there was a problem setting up the connection object
-     */
-    private static HttpURLConnection setupPutConnection(String requestUrl,
-            int contentLength) throws MalformedURLException, IOException {
-        URL connectionUrl = new URL(requestUrl);
-        HttpURLConnection connection = (HttpURLConnection) connectionUrl
-                .openConnection();
-        connection.setRequestMethod("PUT");
-        connection.setRequestProperty("Content-Type", "application/json");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setDoOutput(true);
-        connection.setDoInput(true);
-        connection.setUseCaches(false);
-        connection.setFixedLengthStreamingMode(contentLength);
-        connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
-        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
-        return connection;
-    }
-
-    /**
-     * Sets up an {@link HttpURLConnection} for a PUT request to the given
-     * request URL. To set the content body, write into the connection's
-     * {@link OutputStream}.
-     * 
-     * @param requestUrl
-     *            the URL to send the request to
-     * @param contentLength
-     *            the content length of the data in the request body
-     * @return an {@link HttpURLConnection} set up for a GET request to the
-     *         given URL
-     * @throws MalformedURLException
-     *             when the given URL was malformed
-     * @throws IOException
-     *             when there was a problem setting up the connection object
-     */
-    private static HttpURLConnection setupDeleteConnection(String requestUrl)
-            throws MalformedURLException, IOException {
-        URL connectionUrl = new URL(requestUrl);
-        HttpURLConnection connection = (HttpURLConnection) connectionUrl.openConnection();
-        connection.setRequestMethod("DELETE");
-        connection.setRequestProperty("Accept", "application/json");
-        connection.setUseCaches(false);
-        connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
-        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
-        return connection;
-    }
-
-    /**
-     * Reads the content of the given response {@link InputStream} and converts
-     * it into an {@link JSONObject}.
-     * 
-     * @param responseStream
-     *            the response stream to read the JSON from
-     * @return a {@link JSONObject} created of the content of the response stream
-     * @throws IOException
-     *             when there was a problem reading the response stream
-     */
-    private static JSONObject getJsonObjectFromResponseStream(InputStream responseStream) throws IOException {
-        InputStream inputStream = new BufferedInputStream(responseStream);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-
-        String responseLine = null;
-        StringBuilder responseStringBuilder = new StringBuilder();
-        while ((responseLine = reader.readLine()) != null) { // TODO Need to
-                                                             // close the stream
-                                                             // in case of
-                                                             // IOException?
-            responseStringBuilder.append(responseLine);
+    public void deleteAsync(APYEntity entity, APYDeleteCallback callback) throws IllegalArgumentException {
+        if (entity == null) {
+            throw new IllegalArgumentException("The given entity was null.");
         }
 
-        String responseJson = responseStringBuilder.toString();
-        JSONObject jsonObject = null;
-        try {
-            jsonObject = new JSONObject(responseJson);
-        } catch (JSONException e) {
-            // Invalid JSON in response string
-            // TODO What now?
+        if (APYUtils.isNullOrEmpty(entity.getName())) {
+            throw new IllegalArgumentException("The name of the given entity was null or empty.");
         }
-        return jsonObject;
+
+        if (APYUtils.isNullOrEmpty(entity.getId())) {
+            throw new IllegalArgumentException("The ID of the given entity was null or empty.");
+        }
+
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        new APYDeleteTask(requestInvoker, callback).execute(entity);
     }
 
     /**
-     * Returns the complete API URL including the API ID and version.
-     * 
-     * @return the complete API URL including the API ID and version
+     * Sets the timeout used for any request to the apitrary backend.
+     *
+     * @param timeout the timeout in milliseconds
      */
-    private String getApiUrl() {
-        String apiUrl = apiBaseUrl;
-
-        // Check if the url ends with a slash
-        if (!apiUrl.endsWith("/")) {
-            apiUrl = apiUrl.concat("/");
-        }
-
-        // Append the API ID
-        apiUrl = apiUrl.concat(apiId);
-
-        // Append the API version and a slash
-        apiUrl = apiUrl.concat("/v").concat(apiVersion + "").concat("/");
-
-        return apiUrl;
+    public void setRequestTimeout(int timeout) {
+        this.requestTimeout = timeout;
     }
 
 }
