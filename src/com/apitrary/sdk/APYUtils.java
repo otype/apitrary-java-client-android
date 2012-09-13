@@ -50,8 +50,8 @@ abstract class APYUtils {
      * @param entity
      *            the entity to validate
      * @throws IllegalArgumentException
-     *             when the given entity is null,
-     *             when the entity's name is null or empty
+     *             when the given entity was null,
+     *             when the entity's name was null or empty
      */
     static void validateEntity(APYEntity entity) throws IllegalArgumentException {
         if (entity == null) {
@@ -68,25 +68,25 @@ abstract class APYUtils {
      * 
      * @param checkedParameter
      *            the string parameter to check on null or empty
-     * @return true if the parameter is null or empty, false otherwise
+     * @return true if the parameter was null or empty, false otherwise
      */
     static boolean isNullOrEmpty(String checkedParameter) {
         return checkedParameter == null || checkedParameter.trim().length() == 0;
     }
 
     /**
-     * Converts the given {@link APYEntity} into a {@link JSONObject}.
+     * Converts the given {@link APYEntity} into a {@link JSONObject} using only
+     * the {@link APYEntity}'s property map.
      * 
      * @param entity
-     *            the entity to convert.
+     *            the entity to convert
      * @return the {@link JSONObject} the entity was converted to
      * @throws IllegalArgumentException
-     *             when the given entity is null
-     * @throws APYException
-     *             when there was a problem during conversion
-     * @throws JSONException if there was a problem parsing the JSON
+     *             if the given entity was null
+     * @throws JSONException
+     *             if there was a problem parsing the JSON
      */
-    static JSONObject convertToJson(APYEntity entity) throws IllegalArgumentException, APYException, JSONException {
+    static JSONObject convertToJson(APYEntity entity) throws IllegalArgumentException, JSONException {
         if (entity == null) {
             throw new IllegalArgumentException("The entity to convert must not be null.");
         }
@@ -107,16 +107,16 @@ abstract class APYUtils {
      *            the JSONObject to convert
      * @return the {@link APYEntity} the {@link JSONObject} was converted to
      * @throws IllegalArgumentException
-     *             if the given entity name is null or empty
+     *             if the given entity name was null or empty
      *             if the given JSONObject was null
      * @throws JSONException if there was a problem parsing the JSON
      */
     static APYEntity convertFromJson(String entityName, JSONObject jsonDataObject) throws IllegalArgumentException, JSONException {
         if (isNullOrEmpty(entityName)) {
-            throw new IllegalArgumentException("Parameter 'entityName' is null or empty.");
+            throw new IllegalArgumentException("The given entity name was null or empty.");
         }
         if (jsonDataObject == null) {
-            throw new IllegalArgumentException("Parameter 'jsonDataObject' is null.");
+            throw new IllegalArgumentException("The given JSONObject to convert was null.");
         }
 
         APYEntity apyEntity = new APYEntity(entityName);
