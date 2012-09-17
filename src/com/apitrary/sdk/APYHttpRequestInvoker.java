@@ -21,6 +21,8 @@ import org.json.JSONObject;
 
 import android.util.Log;
 
+import com.apitrary.sdk.APYException.APYExceptionDetailCode;
+
 /**
  * Class used to invoke the actual HTTP requests.
  */
@@ -64,7 +66,10 @@ class APYHttpRequestInvoker {
      * @throws IllegalArgumentException
      *             if the given entity name was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to fetch the entities
+     *             <ul>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     List<APYEntity> fetchAll(String entityName) throws IllegalArgumentException, APYException {
         // Validate the entity name
@@ -118,8 +123,16 @@ class APYHttpRequestInvoker {
                     resultEntities.add(resultEntity);
                 }
                 return resultEntities;
+            } else if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
+                // 500 - Internal Server Error
+                Log.i(LOG_TAG,
+                        "Entities of type '".concat(entityName).concat("' could not be fetched. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+                throw new APYException(APYExceptionDetailCode.BACKEND_ERROR,
+                        "Entities of type '".concat(entityName).concat("' could not be fetched. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
             } else {
-                Log.i(LOG_TAG, 
+                Log.i(LOG_TAG,
                         "Entities of type '".concat(entityName).concat("' could not be fetched. HTTP status: ")
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
                 throw new APYException(
@@ -143,7 +156,11 @@ class APYHttpRequestInvoker {
      * @throws IllegalArgumentException
      *             if the given entity name or ID was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to fetch the entity
+     *             <ul>
+     *             <li>if the entity to fetch could not be found on the apitrary backend</li>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     APYEntity fetchOne(String entityName, String entityId) throws IllegalArgumentException, APYException {
         // Validate the entity name
@@ -189,12 +206,26 @@ class APYHttpRequestInvoker {
 
                 return fetchedEntity;
             } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                // 404 - Not found
                 Log.d(LOG_TAG, "Entity to fetch (name: ".concat(entityName)
                         .concat(", id: ").concat(entityId).concat(") could not be found. HTTP status: ")
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
-                return null;
+                throw new APYException(APYExceptionDetailCode.ENTITY_NOT_FOUND,
+                        "Entity to fetch (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be found. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+            } else if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
+                // 500 - Internal Server Error
+                Log.d(LOG_TAG,
+                        "Entity (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be fetched. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+                throw new APYException(APYExceptionDetailCode.BACKEND_ERROR,
+                        "Entity (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be fetched. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
             } else {
-                Log.i(LOG_TAG, 
+                Log.i(LOG_TAG,
                         "Entity of type '".concat(entityName).concat("' could not be fetched. HTTP status: ")
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
                 throw new APYException(
@@ -202,7 +233,7 @@ class APYHttpRequestInvoker {
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
             }
         } catch (Exception e) {
-            throw new APYException("Entities of type '".concat(entityName).concat("' could not be fetched."), e);
+            throw new APYException("Entity of type '".concat(entityName).concat("' could not be fetched."), e);
         }
     }
 
@@ -215,7 +246,10 @@ class APYHttpRequestInvoker {
      * @throws IllegalArgumentException
      *             if the entity was null or if its name was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to create the entity
+     *             <ul>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     APYEntity create(APYEntity entity) throws IllegalArgumentException, APYException {
         // Validate the entity
@@ -272,8 +306,16 @@ class APYHttpRequestInvoker {
                 createdEntity.setId(getResultObjectId(jsonResultObject));
 
                 return createdEntity;
+            } else if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
+                // 500 - Internal Server Error
+                Log.i(LOG_TAG,
+                        "Entity of type '".concat(entityName).concat("' could not be created. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+                throw new APYException(APYExceptionDetailCode.BACKEND_ERROR,
+                        "Entity of type '".concat(entityName).concat("' could not be created. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
             } else {
-                Log.i(LOG_TAG, 
+                Log.i(LOG_TAG,
                         "Entity of type '".concat(entityName).concat("' could not be created. HTTP status: ")
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
                 throw new APYException(
@@ -294,7 +336,11 @@ class APYHttpRequestInvoker {
      * @throws IllegalArgumentException
      *             if the entity was null or if its name or ID was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to create the entity
+     *             <ul>
+     *             <li>if the entity to update could not be found on the apitrary backend</li>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     APYEntity update(APYEntity entity) throws IllegalArgumentException, APYException {
         // Validate the entity
@@ -358,12 +404,27 @@ class APYHttpRequestInvoker {
 
                 return createdEntity;
             } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-                Log.d(LOG_TAG, "Entity to update (name: ".concat(entityName)
+                // 404 - Not found
+                Log.d(LOG_TAG,
+                        "Entity to update (name: ".concat(entityName)
                         .concat(", id: ").concat(entityId).concat(") could not be found. HTTP status: ")
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
-                return null;
+                throw new APYException(APYExceptionDetailCode.ENTITY_NOT_FOUND,
+                        "Entity to update (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be found. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+            } else if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
+                // 500 - Internal Server Error
+                Log.d(LOG_TAG,
+                        "Entity (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be updated. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+                throw new APYException(APYExceptionDetailCode.BACKEND_ERROR,
+                        "Entity (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be updated. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
             } else {
-                Log.i(LOG_TAG, 
+                Log.i(LOG_TAG,
                         "Entity of type '".concat(entityName).concat("' (id: ").concat(entityId)
                         .concat(") could not be updated. HTTP status: ")
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
@@ -387,7 +448,11 @@ class APYHttpRequestInvoker {
      * @throws IllegalArgumentException
      *             if the entity was null or if its name or ID was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to create the entity
+     *             <ul>
+     *             <li>if the entity to delete could not be found on the apitrary backend</li>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     String delete(APYEntity entity) throws IllegalArgumentException, APYException {
         // Validate the entity
@@ -433,8 +498,28 @@ class APYHttpRequestInvoker {
 
                 // Get the value for the _id and set it into our APYEntity 
                 return getResultObjectId(jsonResultObject);
+            } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                // 404 - Not found
+                Log.d(LOG_TAG,
+                        "Entity to delete (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be found. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+                throw new APYException(APYExceptionDetailCode.ENTITY_NOT_FOUND,
+                        "Entity to delete (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be found. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+            } else if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
+                // 500 - Internal Server Error
+                Log.d(LOG_TAG,
+                        "Entity (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be deleted. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
+                throw new APYException(APYExceptionDetailCode.BACKEND_ERROR,
+                        "Entity (name: ".concat(entityName).concat(", id: ").concat(entityId)
+                        .concat(") could not be deleted. HTTP status: ")
+                        .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
             } else {
-                Log.i(LOG_TAG, 
+                Log.i(LOG_TAG,
                         "Entity of type '".concat(entityName).concat("' could not be deleted. HTTP status: ")
                         .concat(String.valueOf(responseCode)).concat(" - ").concat(responseMessage));
                 throw new APYException(

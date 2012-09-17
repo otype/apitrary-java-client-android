@@ -71,7 +71,10 @@ public class APYClient {
      * @throws IllegalArgumentException
      *             if the given entity name was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to fetch the entities
+     *             <ul>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     public List<APYEntity> fetchAll(String entityName) throws IllegalArgumentException, APYException {
         if (APYUtils.isNullOrEmpty(entityName)) {
@@ -119,7 +122,11 @@ public class APYClient {
      * @throws IllegalArgumentException
      *             if the given entity name or ID was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to fetch the entity
+     *             <ul>
+     *             <li>if the entity to fetch could not be found on the apitrary backend</li>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     public APYEntity fetchOne(String entityName, String entityId) throws IllegalArgumentException, APYException {
         if (APYUtils.isNullOrEmpty(entityName)) {
@@ -173,7 +180,11 @@ public class APYClient {
      * @param entity
      *            the {@link APYEntity} to create.
      * @throws IllegalArgumentException if the entity was null or if its name was null or empty
-     * @throws APYException if anything went wrong while trying to create the entity
+     * @throws APYException
+     *             <ul>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     public APYEntity create(APYEntity entity) throws IllegalArgumentException, APYException {
         if (entity == null) {
@@ -220,7 +231,11 @@ public class APYClient {
      * @throws IllegalArgumentException
      *             if the entity was null or if its name or ID was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to create the entity
+     *             <ul>
+     *             <li>if the entity to update could not be found on the apitrary backend</li>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     public APYEntity update(APYEntity entity) throws IllegalArgumentException, APYException {
         if (entity == null) {
@@ -275,7 +290,11 @@ public class APYClient {
      * @throws IllegalArgumentException
      *             if the entity was null or if its name or ID was null or empty
      * @throws APYException
-     *             if anything went wrong while trying to create the entity
+     *             <ul>
+     *             <li>if the entity to delete could not be found on the apitrary backend</li>
+     *             <li>if there was an error on the backend side</li>
+     *             <li>if anything else went wrong</li>
+     *             </ul>
      */
     public String delete(APYEntity entity) throws IllegalArgumentException, APYException {
         if (entity == null) {
