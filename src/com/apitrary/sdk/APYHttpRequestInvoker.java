@@ -201,7 +201,7 @@ class APYHttpRequestInvoker {
                 JSONObject jsonDataObject = getResultObjectData(jsonResultObject);
                 APYEntity fetchedEntity = APYUtils.convertFromJson(entityName, jsonDataObject);
 
-                // Get the value for the _id and set it into our APYEntity 
+                // Get the value for the _id and set it into our APYEntity
                 fetchedEntity.setId(getResultObjectId(jsonResultObject));
 
                 return fetchedEntity;
@@ -298,14 +298,10 @@ class APYHttpRequestInvoker {
                 // Extract the JSON 'result' object
                 JSONObject jsonResultObject = getResultObjectFromResponseJson(responseJsonObject);
 
-                // Convert the _data object into an APYEntity
-                JSONObject jsonDataObject = getResultObjectData(jsonResultObject);
-                APYEntity createdEntity = APYUtils.convertFromJson(entityName, jsonDataObject);
+                // Get the returned ID of the updated entity and set it on the entity
+                entity.setId(getResultObjectId(jsonResultObject));
 
-                // Get the value for the _id and set it into our APYEntity 
-                createdEntity.setId(getResultObjectId(jsonResultObject));
-
-                return createdEntity;
+                return entity;
             } else if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
                 // 500 - Internal Server Error
                 Log.i(LOG_TAG,
@@ -395,14 +391,10 @@ class APYHttpRequestInvoker {
                 // Extract the JSON 'result' object
                 JSONObject jsonResultObject = getResultObjectFromResponseJson(responseJsonObject);
 
-                // Convert the _data object into an APYEntity
-                JSONObject jsonDataObject = getResultObjectData(jsonResultObject);
-                APYEntity createdEntity = APYUtils.convertFromJson(entityName, jsonDataObject);
+                // Get the returned ID of the updated entity and re-set it on the entity 
+                entity.setId(getResultObjectId(jsonResultObject));
 
-                // Get the value for the _id and set it into our APYEntity 
-                createdEntity.setId(getResultObjectId(jsonResultObject));
-
-                return createdEntity;
+                return entity;
             } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
                 // 404 - Not found
                 Log.d(LOG_TAG,
@@ -496,7 +488,7 @@ class APYHttpRequestInvoker {
                 // Extract the JSON 'result' object
                 JSONObject jsonResultObject = getResultObjectFromResponseJson(responseJsonObject);
 
-                // Get the value for the _id and set it into our APYEntity 
+                // Get the returned ID of the deleted entity and return it to the caller
                 return getResultObjectId(jsonResultObject);
             } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
                 // 404 - Not found
