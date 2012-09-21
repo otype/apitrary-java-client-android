@@ -45,10 +45,9 @@ Creating the task on the backend is now as simple as calling:
     
     apitraryClient.create(task);
     
-To keep the application responsive at any time, long running operations, like networking operations, need to be executed off the UI thread. For doing so, you need to execute the line above in another thread. One possibility is to create an implementation of AsyncTask.
+To keep the application responsive at any time, long running operations, like networking operations, need to be executed off the UI thread. For doing so, you need to execute the line above in another thread. One possibility is to create an implementation of an AsyncTask.
 
 To free you from implementing concurreny yourself, the *APYClient* provides an additional asynchronous implementation for each of its (synchronous) operations.
-
 Creating the task entity from above asynchronously, you’d do the following:
 
     apitraryClient.createAsync(task, new APYCreateCallback() {
