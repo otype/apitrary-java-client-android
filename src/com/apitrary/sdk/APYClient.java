@@ -21,6 +21,11 @@ public class APYClient {
     private int requestTimeout = 15000;
 
     /**
+     * The API key used to access the backend API.
+     */
+    private String apiKey;
+
+    /**
      * The full URL of the apitrary API to work with.
      */
     private URL fullApiUrl;
@@ -30,11 +35,13 @@ public class APYClient {
      * apitrary API.
      * 
      * @param apiBaseUrl
-     *            the base URL of the target API
+     *            The base URL of the backend API
      * @param apiId
-     *            the API ID used to identify the API to use
+     *            The unique API ID identifying the the backend API
+     * @param apiKey
+     *            The API key used to access the backend API
      * @param apiVersion
-     *            the version of your API as an integer >= 1
+     *            The version of the backend API as an integer >= 1
      * @throws IllegalArgumentException
      *             if the given apiBaseUrl was null or empty, if the given apiId
      *             was null or empty, if the given API version was less or equal
@@ -42,7 +49,8 @@ public class APYClient {
      * @throws MalformedURLException
      *             if no valid URL could be constructed using the given values
      */
-    public APYClient(String apiBaseUrl, String apiId, int apiVersion) throws IllegalArgumentException, MalformedURLException {
+    public APYClient(String apiBaseUrl, String apiId, String apiKey, int apiVersion)
+            throws IllegalArgumentException, MalformedURLException {
         if (APYUtils.isNullOrEmpty(apiBaseUrl)) {
             throw new IllegalArgumentException(
                     "The API base URL must not be null or empty.");
@@ -53,11 +61,17 @@ public class APYClient {
                     "The API ID must not be null or empty.");
         }
 
+        if (APYUtils.isNullOrEmpty(apiKey)) {
+            throw new IllegalArgumentException(
+                    "The API key must not be null or empty.");
+        }
+
         if (apiVersion <= 0) {
             throw new IllegalArgumentException(
                     "The API version must be an integer >= 1.");
         }
 
+        this.apiKey = apiKey;
         fullApiUrl = APYUtils.getFullApiUrl(apiBaseUrl, apiId, apiVersion);
     }
 
@@ -81,7 +95,7 @@ public class APYClient {
             throw new IllegalArgumentException("The given entity name was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         return requestInvoker.fetchAll(entityName);
     }
 
@@ -106,7 +120,7 @@ public class APYClient {
             throw new IllegalArgumentException("The given callback was null.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         new APYFetchAllTask(requestInvoker, callback).execute(entityName);
     }
 
@@ -137,7 +151,7 @@ public class APYClient {
             throw new IllegalArgumentException("The given entity id was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         return requestInvoker.fetchOne(entityName, entityId);
     }
 
@@ -170,7 +184,7 @@ public class APYClient {
             throw new IllegalArgumentException("The given callback was null.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         new APYFetchOneTask(requestInvoker, callback).execute(entityName, entityId);
     }
 
@@ -195,7 +209,7 @@ public class APYClient {
             throw new IllegalArgumentException("The name of the given entity was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         return requestInvoker.create(entity);
     }
 
@@ -218,7 +232,7 @@ public class APYClient {
             throw new IllegalArgumentException("The name of the given entity was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         new APYCreateTask(requestInvoker, callback).execute(entity);
     }
 
@@ -250,7 +264,7 @@ public class APYClient {
             throw new IllegalArgumentException("The ID of the given entity was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         return requestInvoker.update(entity);
     }
     
@@ -277,7 +291,7 @@ public class APYClient {
             throw new IllegalArgumentException("The ID of the given entity was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         new APYUpdateTask(requestInvoker, callback).execute(entity);
     }
 
@@ -309,7 +323,7 @@ public class APYClient {
             throw new IllegalArgumentException("The ID of the given entity was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         return requestInvoker.delete(entity);
     }
 
@@ -336,7 +350,7 @@ public class APYClient {
             throw new IllegalArgumentException("The ID of the given entity was null or empty.");
         }
 
-        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, requestTimeout);
+        APYHttpRequestInvoker requestInvoker = new APYHttpRequestInvoker(fullApiUrl, apiKey, requestTimeout);
         new APYDeleteTask(requestInvoker, callback).execute(entity);
     }
 

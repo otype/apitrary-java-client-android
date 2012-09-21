@@ -16,12 +16,11 @@ abstract class APYUtils {
      * Returns the full API URL constructed by the given values.
      * 
      * @param apiBaseUrl
-     *            the base API URL consisting of protocol, host and port (e.g.
-     *            "http://HOST:PORT")
+     *            The base URL of the backend API
      * @param apiId
-     *            the API ID identifying the API work with
+     *            The unique API ID identifying the the backend API
      * @param apiVersion
-     *            the API's version to work with
+     *            The version of the backend API as an integer >= 1
      * @return the full API URL ending with a slash (e.g.
      *         "http://HOST:PORT/API_ID/API_VERSION/")
      * @throws MalformedURLException

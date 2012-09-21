@@ -35,9 +35,14 @@ class APYHttpRequestInvoker {
 
     /**
      * The API URL to execute all requests on. This URL includes protocol, host,
-     * port, API key and API version.
+     * port, API ID and API version.
      */
     private URL apiUrl;
+
+    /**
+     * The API key used to access the backend API.
+     */
+    private String apiKey;
 
     /**
      * The timeout for any request in milliseconds.
@@ -51,9 +56,10 @@ class APYHttpRequestInvoker {
      * @param apiUrl the API URL to invoke HTTP requests on
      * @param timeout the request timeout in milliseconds. If < 1 no timeout is set
      */
-    APYHttpRequestInvoker(URL apiUrl, int timeout) {
+    APYHttpRequestInvoker(URL apiUrl, String apiKey, int timeout) {
         // TODO Validate the URL and timeout
         this.apiUrl = apiUrl;
+        this.apiKey = apiKey;
         this.timeout = timeout;
     }
 
@@ -79,7 +85,7 @@ class APYHttpRequestInvoker {
 
         try {
             // The full URL the request will be sent to
-            URL requestUrl = new URL(apiUrl, entityName.toLowerCase(Locale.US));
+            URL requestUrl = new URL(apiUrl, entityName.toLowerCase(Locale.US).concat("&apiKey=").concat(apiKey));
 
             Log.d(LOG_TAG, "GET ".concat(requestUrl.toString()));
 
@@ -174,7 +180,8 @@ class APYHttpRequestInvoker {
 
         try {
             // The full URL the request will be sent to
-            URL requestUrl = new URL(apiUrl, entityName.toLowerCase(Locale.US).concat("/").concat(entityId));
+            URL requestUrl = new URL(apiUrl,
+                    entityName.toLowerCase(Locale.US).concat("/").concat(entityId).concat("&apiKey=").concat(apiKey));
 
             Log.d(LOG_TAG, "GET ".concat(requestUrl.toString()));
 
@@ -265,7 +272,7 @@ class APYHttpRequestInvoker {
 
         try {
             // The full URL the request will be sent to
-            URL requestUrl = new URL(apiUrl, entity.getName().toLowerCase(Locale.US));
+            URL requestUrl = new URL(apiUrl, entity.getName().toLowerCase(Locale.US).concat("&apiKey=").concat(apiKey));
 
             Log.d(LOG_TAG, "POST ".concat(requestUrl.toString()));
     
@@ -357,7 +364,8 @@ class APYHttpRequestInvoker {
 
         try {
             // The full URL the request will be sent to
-            URL requestUrl = new URL(apiUrl, entityName.toLowerCase(Locale.US).concat("/").concat(entityId));
+            URL requestUrl = new URL(apiUrl,
+                    entityName.toLowerCase(Locale.US).concat("/").concat(entityId).concat("&apiKey=").concat(apiKey));
 
             Log.d(LOG_TAG, "PUT ".concat(requestUrl.toString()));
 
@@ -465,7 +473,8 @@ class APYHttpRequestInvoker {
 
         try {
             // The full URL the request will be sent to
-            URL requestUrl = new URL(apiUrl, entityName.toLowerCase(Locale.US).concat("/").concat(entityId));
+            URL requestUrl = new URL(apiUrl,
+                    entityName.toLowerCase(Locale.US).concat("/").concat(entityId).concat("&apiKey=").concat(apiKey));
 
             Log.d(LOG_TAG, "DELETE ".concat(requestUrl.toString()));
 
