@@ -19,6 +19,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.os.Build;
 import android.util.Log;
 
 import com.apitrary.sdk.APYException.APYExceptionDetailCode;
@@ -61,6 +62,8 @@ class APYHttpRequestInvoker {
         this.apiUrl = apiUrl;
         this.apiKey = apiKey;
         this.timeout = timeout;
+
+        disableConnectionReuseIfNecessary();
     }
 
     /**
@@ -688,6 +691,19 @@ class APYHttpRequestInvoker {
 
         String responseJson = responseStringBuilder.toString();
         return new JSONObject(responseJson);
+    }
+
+    /**
+     * Prior to Froyo, HttpURLConnection had some frustrating bugs. In
+     * particular, calling close() on a readable InputStream could poison the
+     * connection pool. Work around this by disabling connection pooling.
+     * See http://android-developers.blogspot.de/2011/09/androids-http-clients.html
+     */
+    private void disableConnectionReuseIfNecessary() {
+        // HTTP connection reuse which was buggy pre-froyo
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.FROYO) {
+            System.setProperty("http.keepAlive", "false");
+        }
     }
 
     /**
