@@ -57,7 +57,7 @@ Creating the task entity from above asynchronously, you’d do the following:
         }
     
         onError(APYException error) {
-            // There was an error while creating the task
+            // There was an error
         }
     });
 
